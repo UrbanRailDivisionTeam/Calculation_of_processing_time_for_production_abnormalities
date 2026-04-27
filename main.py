@@ -73,7 +73,7 @@ def main():
     def _is_workday(input_time: datetime):
         dd = local.query_df(f"""
                 SELECT 
-                    bill.是否休息
+                    bill."是否休息"
                 FROM 
                     (        
                         SELECT
