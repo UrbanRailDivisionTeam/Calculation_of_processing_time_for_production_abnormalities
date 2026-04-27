@@ -113,8 +113,7 @@ def main():
                 FROM
                     ods.cg_mes_usm_exception_bill
                 WHERE
-                    "删除标识" = '未删除'
-                    AND Deleted = 0 QUALIFY row_number() OVER (
+                    Deleted = 0 QUALIFY row_number() OVER (
                         PARTITION BY
                             zid
                         ORDER BY
