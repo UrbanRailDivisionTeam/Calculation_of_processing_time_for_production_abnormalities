@@ -1,6 +1,6 @@
 from typing import Callable
 from dataclasses import dataclass
-from datetime import datetime,timedelta,date,time
+from datetime import datetime,timedelta,date,time,timezone
 from pandas import Timestamp
 
 @dataclass
@@ -11,6 +11,10 @@ class Interval():
     def length(self):
         return self.right-self.left
 
+def normalize_datetime(dt: datetime) -> datetime:
+    if dt.tzinfo is not None:
+        return dt.astimezone(timezone.utc).replace(tzinfo=None)
+    return dt
 
 worktime = [
     Interval(timedelta(hours=8, minutes=30, seconds=0),timedelta(hours=12, minutes=0, seconds=0)),
@@ -48,6 +52,8 @@ def work2real_hour(duration: timedelta) -> timedelta:
 
 
 def real2work(time_input: datetime, base_time:datetime):
+    time_input = normalize_datetime(time_input)
+    base_time = normalize_datetime(base_time)
     t = base_time
     duration = timedelta(seconds=0)
     while (t < time_input):
@@ -58,6 +64,7 @@ def real2work(time_input: datetime, base_time:datetime):
 
 
 def work2real(duration: timedelta, base_time:datetime):
+    base_time = normalize_datetime(base_time)
     t = base_time
     d = duration
     worktime_fullday = real2work_hour(timedelta(hours=24))
@@ -74,6 +81,7 @@ def worktime_add(time_input: datetime, duration: timedelta):
     '''
     使用输入时间向前取整作为基准时间
     '''
+    time_input = normalize_datetime(time_input)
     base_time=datetime.combine( 
         date=time_input.date(),
         time=time(hour=0,minute=0,microsecond=0)
