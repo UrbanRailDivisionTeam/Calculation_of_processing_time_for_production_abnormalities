@@ -138,14 +138,14 @@ def main():
             response_overtime = datetime.now() > response_deadline
         else:
             response = pd.Timestamp(row["响应日期"]).to_pydatetime()
-            response_overtime = response > response_deadline
+            response_overtime = time_calc.normalize_datetime(response) > time_calc.normalize_datetime(response_deadline)
             handle_deadline = time_calc.worktime_add(response, handle_limit)  # 响应后指定时间内处理
         handle_overtime = False  # 处理是否超时
         if pd.isnull(row["处理日期"]):
             handle_overtime = datetime.now() > handle_deadline
         else:
             handle = pd.Timestamp(row["处理日期"]).to_pydatetime()
-            handle_overtime = handle > handle_deadline
+            handle_overtime = time_calc.normalize_datetime(handle) > time_calc.normalize_datetime(handle_deadline)
         finished = False
         if row["异常状态分类"] == "待关闭" or row["异常状态分类"] == "已关闭":
             finished = True
