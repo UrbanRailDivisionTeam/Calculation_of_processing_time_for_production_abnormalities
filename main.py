@@ -73,7 +73,7 @@ def main():
     def _is_workday(input_time: datetime):
         dd = local.query_df(f"""
                 SELECT 
-                    bill."是否休息"
+                    bill."是否休息" AS "是否休息"
                 FROM 
                     (        
                         SELECT
@@ -92,7 +92,7 @@ def main():
             """)
         # 如果有额外的设定，就按照要求返回结果
         if len(dd) > 0:
-            return not bool(dd[0])
+            return not bool(dd["是否休息"][0])
         # 如果没有额外的节假日，就按照周一到周五上班返回
         return input_time.weekday() < 5
     time_calc.is_workday = _is_workday
