@@ -10,6 +10,45 @@ warnings.simplefilter("ignore", FutureWarning)
 
 _client = None
 
+def get_clickhouse_type(dtype) -> str:  # type: ignore
+    """根据 pandas dtype 推断 ClickHouse 类型"""
+    if pd.api.types.is_integer_dtype(dtype):
+        return 'Int64'
+    if pd.api.types.is_float_dtype(dtype):
+        return 'Float64'
+    if pd.api.types.is_bool_dtype(dtype):
+        return 'UInt8'  # ClickHouse 中常用 UInt8 表示布尔
+    if pd.api.types.is_datetime64_any_dtype(dtype):
+        return 'DateTime64(6)'
+    # 默认字符串，能兼容中文、混合类型等
+    return 'String'
+
+
+def create_table_from_df(
+    client,
+    df: pd.DataFrame,
+    table_name: str,
+    database: str = "default"
+):
+    """根据 DataFrame 自动生成并执行 CREATE TABLE"""
+    columns_def = []
+    for col_name, dtype in df.dtypes.items():
+        ch_type = get_clickhouse_type(dtype)
+        # 中文/特殊列名用双引号包裹，避免 ClickHouse 解析错误
+        safe_col = f'"{col_name}"'
+        columns_def.append(f"    {safe_col} {ch_type}")
+
+    # 如果列很多，用 tuple() 作为 ORDER BY（无排序键）
+    # 如果有合适的列（如 ID、时间），可以改成 ORDER BY ("xxx")
+    sql = f"""CREATE TABLE IF NOT EXISTS {database}.{table_name} (
+{',\n'.join(columns_def)}
+) ENGINE = MergeTree()
+ORDER BY tuple()
+"""
+    client.command(sql)
+    print(f"已确保表存在: {database}.{table_name} ({len(df.columns)} 列)")
+_client = None
+
 
 def get_client() -> clickhouse_connect.driver.client.Client:
     global _client
@@ -115,9 +154,10 @@ def main():
                      ])
 
     time_judge = pd.DataFrame(cols, columns=cache_columns)
-    local.command("""
-        CREATE OR REPLACE TABLE dwd.cg_mes_usm_exception_cache 
-        AS SELECT * FROM time_judge""")
+    create_table_from_df(local, time_judge, "cg_mes_usm_exception_cache", "dwd")
+    # local.command("""
+    #     CREATE OR REPLACE TABLE dwd.cg_mes_usm_exception_cache 
+    #     AS SELECT * FROM time_judge""")
     local.command("""
         CREATE OR REPLACE TABLE dwd.cg_mes_usm_exception_processed AS
         WITH emp_org AS ( 
@@ -182,13 +222,25 @@ def main():
             "closer"."部门" AS "关闭人部门",
             "pro"."项目名称" AS "项目名称"
         FROM "exc_bill" AS "bill"
-        LEFT JOIN "time_judge" AS "t" ON "bill"."zid" = "t"."fzid"
+        LEFT JOIN dwd.cg_mes_usm_exception_cache AS "t" ON "bill"."zid" = "t"."fzid"
         LEFT JOIN "emp_org" AS "reporter" ON "bill"."发起人" = "reporter"."工号"
         LEFT JOIN "emp_org" AS "appoint" ON "bill"."指定响应人" = "appoint"."工号"
         LEFT JOIN "emp_org" AS "response" ON "bill"."响应人"="response"."工号" 
         LEFT JOIN "emp_org" AS "handle" ON "bill"."处理人"= "handle"."工号"
         LEFT JOIN "emp_org" AS "closer" ON "bill"."关闭人"= "closer"."工号"
-        LEFT JOIN "ods"."crrc_project1" AS "pro" ON "bill"."项目" = "pro"."项目号"
+        LEFT JOIN (
+            SELECT
+                *
+            FROM
+                ods.crrc_project1
+            WHERE
+                Deleted = 0 QUALIFY row_number() OVER (
+                    PARTITION BY
+                        zid
+                    ORDER BY
+                        Version DESC
+                ) = 1
+        ) AS "pro" ON "bill"."项目" = "pro"."项目号"
     """)
 
 
