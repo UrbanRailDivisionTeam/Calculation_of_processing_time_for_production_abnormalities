@@ -121,7 +121,7 @@ def main():
                     ) = 1
             ) AS bill
             LEFT JOIN dwd.cg_mes_usm_exception_cache AS cache ON bill."zid" = cache."fzid"
-            WHERE bill."创建日期" > '{filter_time.strftime(r"%Y-%m-%d %H:%M")}'
+            WHERE bill."创建日期" > '{filter_time.strftime(r"%Y-%m-%d %H:%M:%S.%f")}'
         """)
     cols: list[list] = []
     for _, row in exc_bill.iterrows():
