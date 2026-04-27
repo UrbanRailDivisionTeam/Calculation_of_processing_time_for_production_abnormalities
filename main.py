@@ -88,7 +88,7 @@ def main():
                                     Version DESC
                             ) = 1
                     ) AS bill
-                WHERE bill."节假日日期" = '{input_time.strftime(r"%Y-%m-%d %H:%M")}'
+                WHERE bill."节假日日期" = '{input_time.strftime(r"%Y-%m-%d %H:%M:%S.%f")}'
             """)
         # 如果有额外的设定，就按照要求返回结果
         if len(dd) > 0:
@@ -121,7 +121,7 @@ def main():
                     ) = 1
             ) AS bill
             LEFT JOIN dwd.cg_mes_usm_exception_cache AS cache ON bill."zid" = cache."fzid"
-            WHERE bill."创建日期" > '{filter_time.strftime(r"%Y-%m-%d %H:%M:%S.%f")}'
+            WHERE bill."创建日期" > '{filter_time.strftime(r"%Y-%m-%d %H:%M:%S.%f:%S.%f")}'
         """)
     cols: list[list] = []
     for _, row in exc_bill.iterrows():
@@ -246,12 +246,12 @@ def main():
     
 def run():
     while True:
-        print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] 生产异常开始计算")
+        print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f:%S')}] 生产异常开始计算")
         try:
             main()
         except Exception:
-            print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] error:{traceback.format_exc()}")
-        print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] 生产异常计算完成，等待1分钟......")
+            print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f:%S')}] error:{traceback.format_exc()}")
+        print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f:%S')}] 生产异常计算完成，等待1分钟......")
         time.sleep(60)
 
 if __name__ == "__main__":
