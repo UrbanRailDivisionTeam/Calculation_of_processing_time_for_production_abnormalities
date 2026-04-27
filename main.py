@@ -1,5 +1,7 @@
 import clickhouse_connect.driver.client
 import pandas as pd
+import time
+import traceback
 from datetime import datetime, timedelta
 import time_calc
 import warnings
@@ -242,7 +244,16 @@ def main():
                 ) = 1
         ) AS "pro" ON "bill"."项目" = "pro"."项目号"
     """)
-
+    
+def run():
+    while True:
+        print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] 生产异常开始计算")
+        try:
+            main()
+        except Exception:
+            print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] error:{traceback.format_exc()}")
+        print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] 生产异常计算完成，等待1分钟......")
+        time.sleep(60)
 
 if __name__ == "__main__":
     main()
